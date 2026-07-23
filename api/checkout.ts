@@ -201,7 +201,12 @@ export default {
     let session: Stripe.Checkout.Session;
     try {
       session = await stripe.checkout.sessions.create({
-        ui_mode: 'embedded',
+        // Stripe renamed this enum value from 'embedded' to 'embedded_page'
+        // in a dahlia-version update (see Stripe's changelog: "Updates
+        // Checkout Session UI mode enum values", 2026-03-25) — 'embedded'
+        // now fails outright. embedded_page is the direct replacement for
+        // the same no-redirect, on-page experience this integration uses.
+        ui_mode: 'embedded_page',
         mode: 'payment',
         line_items: lineItems,
         customer_email: user.email,
