@@ -24,11 +24,14 @@ function badRequest(message: string) {
 
 export default {
   async fetch(request: Request) {
+    console.log('checkout: request received', request.method);
+
     if (request.method !== 'POST') {
       return Response.json({ error: 'Method not allowed' }, { status: 405 });
     }
 
     const secretKey = process.env.STRIPE_SECRET_KEY;
+    console.log('checkout: STRIPE_SECRET_KEY present?', !!secretKey);
     if (!secretKey) {
       console.error('checkout: STRIPE_SECRET_KEY is not set');
       return Response.json({ error: 'Server misconfiguration' }, { status: 500 });
@@ -40,15 +43,29 @@ export default {
     // Supabase as insecure for server-side authorization checks.
     const authHeader = request.headers.get('authorization');
     const accessToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    console.log('checkout: accessToken present?', !!accessToken);
     if (!accessToken) {
       return Response.json({ error: 'Sign in required.' }, { status: 401 });
     }
 
-    const supabase = getSupabaseAdmin();
+    console.log('checkout: VITE_SUPABASE_URL present?', !!process.env.VITE_SUPABASE_URL);
+    console.log('checkout: SUPABASE_SECRET_KEY present?', !!process.env.SUPABASE_SECRET_KEY);
+
+    let supabase;
+    try {
+      supabase = getSupabaseAdmin();
+      console.log('checkout: getSupabaseAdmin() succeeded');
+    } catch (err) {
+      console.error('checkout: getSupabaseAdmin() threw', err);
+      return Response.json({ error: 'Server misconfiguration (admin client)' }, { status: 500 });
+    }
+
+    console.log('checkout: calling supabase.auth.getUser()...');
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser(accessToken);
+    console.log('checkout: getUser() returned', { hasUser: !!user, authError: authError?.message });
 
     if (authError || !user) {
       return Response.json({ error: 'Sign in required.' }, { status: 401 });
