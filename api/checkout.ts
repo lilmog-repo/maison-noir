@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import { getSupabaseAdmin } from './_lib/supabaseAdmin';
+import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
 
 // Pin the API version explicitly rather than relying on the account default,
 // per Stripe's own guidance — keeps response shapes matching the SDK's types.
