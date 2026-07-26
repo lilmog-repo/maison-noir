@@ -24,6 +24,27 @@ function badRequest(message: string) {
 
 export default {
   async fetch(request: Request) {
+    // TEMPORARY DIAGNOSTIC: wrapping everything in one outer try/catch that
+    // returns the real error directly in the HTTP response body, rather than
+    // relying on console.log/Vercel's log capture — which has documented,
+    // real cases of silently dropping output even when a function completes
+    // successfully. This bypasses that entirely: whatever actually happens
+    // will show up in the response itself, visible in the browser network
+    // tab / on the checkout page, no log pipeline involved.
+    try {
+      return await handleCheckout(request);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const stack = err instanceof Error ? err.stack : undefined;
+      return Response.json(
+        { error: 'DIAGNOSTIC: unhandled exception in checkout function', message, stack },
+        { status: 500 }
+      );
+    }
+  },
+};
+
+async function handleCheckout(request: Request) {
     console.log('checkout: request received', request.method);
 
     if (request.method !== 'POST') {
@@ -243,8 +264,7 @@ export default {
     await supabase.from('orders').update({ stripe_checkout_session_id: session.id }).eq('id', order.id);
 
     return Response.json({ clientSecret: session.client_secret });
-  },
-};
+}
 
 function absoluteImageUrl(request: Request, imagePath: string): string {
   if (imagePath.startsWith('http')) return imagePath;
